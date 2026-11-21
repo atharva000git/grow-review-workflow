@@ -1,0 +1,445 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Upload GROW reviews",
+        "formDescription": "Upload the reviews CSV for analysis",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "GROW reviews CSV",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        432,
+        304
+      ],
+      "id": "bf5ceb65-ecb4-49d8-ad3a-1ff86d95380f",
+      "name": "On form submission",
+      "webhookId": "929dd734-1bff-45fa-bc0e-673f85aa8ba5"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "GROW_reviews_CSV",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        656,
+        32
+      ],
+      "id": "7834039d-948d-4107-8306-683507a48974",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "reviews",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        896,
+        304
+      ],
+      "id": "df4955bf-8885-441e-8d27-0c37c6ae47ae",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the 25 sample reviews. Assign each review exactly one primary theme. Return no more than 5 theme objects in this format: {\"name\":\"theme name\",\"count\":integer}. The counts must add up to exactly 25. Set top_3_themes to the three highest-count theme objects, ranked by count.\n\nUse these verified exact review excerpts:\n- 9f5b56bf-43de-4e69-8b74-613b1fc79ba6 — \"lagging chart\"\n- d44fe8e4-fb0b-462e-8ebb-e3cde86f440f — \"app stuck problem 5min chart not working\"\n- 153c280d-8715-4aa0-8ceb-e3cde86f440f — \"borkar jada hai20 ki jagah 10\"\n\nThe weekly pulse must be 40 words or fewer. Keep the key observation to one short sentence and give exactly 3 brief action ideas. Do not repeat quotes or actions in the pulse.\n\nThe wider review scan found a recurring brokerage cost concern, not a confirmed misunderstanding:\n- 4caf3c83-d249-4289-9b9e-c50f576c5646\n- d8e90096-6679-4ab6-8570-5c8b4b43b01e\n\nGive at most 4 neutral fee explanation bullets, each 15 words or fewer. Facts: equity brokerage is the lower of ₹20 or 0.1% of trade value per executed order, with a ₹5 minimum; F&O brokerage is ₹20 per order; separate orders add up; other applicable charges may apply. Return only the two fee review IDs in fee_evidence.\n\nSet identified_fee_issue to \"Recurring brokerage cost concern; the reviews do not confirm a misunderstanding.\" Set last_checked to \"2026-11-10\".\n\nReturn compact, valid JSON only—no markdown fences—with these keys:\nthemes, top_3_themes, quotes, key_observation, action_ideas, weekly_pulse, identified_fee_issue, fee_evidence, explanation_bullets, source_links, last_checked\n\nUse these exact source links:\nhttps://groww.in/pricing\nhttps://groww.in/help/payments/payments-charges/why-is-my-brokerage-more-than-20-rupees--71\n\nSample reviews:\n{{ JSON.stringify($json.reviews) }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1296,
+        304
+      ],
+      "id": "6043d6ec-8ee9-4bd3-a321-6d3ad59cedbf",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "=qwen/qwen3.8-27b",
+        "options": {
+          "maxTokensToSample": 900
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        496
+      ],
+      "id": "7553a4ed-a18e-477a-b802-968360b87bd2",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "zlKFoCdCIvYlq2lk",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const reviews = $input.first().json.reviews ?? [];\n\nconst recentReviews = reviews\n  .filter(r => r.date >= '2026-08-24')\n  .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));\n\nconst sampleSize = Math.min(25, recentReviews.length);\n\nconst sample = Array.from({ length: sampleSize }, (_, i) => {\n  const index = sampleSize === 1\n    ? 0\n    : Math.round(i * (recentReviews.length - 1) / (sampleSize - 1));\n  return recentReviews[index];\n});\n\nreturn [{\n  json: {\n    reviews: sample,\n    recent_review_count: recentReviews.length,\n    sample_count: sample.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        32
+      ],
+      "id": "1b062eff-d6d7-4cc2-9703-5aba09306cb7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Approval decision",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Reject"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "="
+            }
+          ]
+        },
+        "options": {
+          "formTitle": "Review generated update",
+          "formDescription": "={{$json.text}}"
+        }
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1584,
+        16
+      ],
+      "id": "30e5d22f-58b4-476f-a7a9-cbd6fe56b6bb",
+      "name": "Form",
+      "webhookId": "e3f33bff-017c-49f0-8005-a1a7e3f997bb"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "203be13b-de6c-4c1d-b8d9-4c25fa77437e",
+              "leftValue": "={{$json[\"Approval decision\"]}}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1744,
+        288
+      ],
+      "id": "6e76eb2e-843c-42b0-bb09-54442c4c2577",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://mcp.notion.com/mcp",
+        "authentication": "mcpOAuth2Api",
+        "tool": {
+          "__rl": true,
+          "value": "notion-create-pages",
+          "mode": "list",
+          "cachedResultName": "notion-create-pages"
+        },
+        "parameters": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pages": "={{ [\n  {\n    \"properties\": {\n      \"title\": \"GROW Weekly Product Pulse\"\n    },\n    \"content\": $json.notion_content\n  }\n] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "pages",
+              "displayName": "pages",
+              "defaultMatch": false,
+              "required": true,
+              "display": true,
+              "type": "array",
+              "defaultValue": "[\n  {\n    \"properties\": {\n      \"<additionalProperty>\": \"string\"\n    },\n    \"content\": \"string\",\n    \"template_id\": \"string\",\n    \"icon\": \"string\",\n    \"cover\": \"string\",\n    \"full_width\": false,\n    \"is_skill\": false,\n    \"preserve_internal_links\": false\n  }\n]",
+              "removed": false
+            },
+            {
+              "id": "creation_mode",
+              "displayName": "creation_mode",
+              "defaultMatch": false,
+              "required": false,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "draft",
+                  "value": "draft"
+                }
+              ],
+              "removed": true
+            },
+            {
+              "id": "parent",
+              "displayName": "parent",
+              "defaultMatch": false,
+              "required": false,
+              "display": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "allow_async",
+              "displayName": "allow_async",
+              "defaultMatch": false,
+              "required": false,
+              "display": true,
+              "type": "boolean",
+              "removed": true
+            },
+            {
+              "id": "instructions_version",
+              "displayName": "instructions_version",
+              "defaultMatch": false,
+              "required": false,
+              "display": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "skill",
+              "displayName": "skill",
+              "defaultMatch": false,
+              "required": false,
+              "display": true,
+              "type": "string",
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        2112,
+        288
+      ],
+      "id": "13d89f53-bcfd-434c-9b32-33c8fca7b0ba",
+      "name": "MCP Client",
+      "credentials": {
+        "mcpOAuth2Api": {
+          "id": "3WIjGMAfLiBBefJ9",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $('Basic LLM Chain').first().json.text;\nconst d = JSON.parse(raw.replace(/```json|```/g, '').trim());\nconst today = '2026-11-20';\n\nconst quotes = [\n  { id: '9f5b56bf-43de-4e69-8b74-613b1fc79ba6', q: 'lagging chart' },\n  { id: 'd44fe8e4-fb0b-462e-8ebb-e3cde86f440f', q: 'app stuck problem 5min chart not working' },\n  { id: '153c280d-8715-4aa0-8ceb-c80a023c77d2', q: 'borkar jada hai20 ki jagah 10' }\n];\nconst links = [\n  'https://groww.in/pricing',\n  'https://groww.in/help/payments/payments-charges/why-is-my-brokerage-more-than-20-rupees--71'\n];\nconst top = d.top_3_themes.map(t => `${t.name} (${t.count}/25)`).join('; ');\n\nconst pulse =\n`Weekly Product Pulse (GROW, sample of 25 reviews, Aug 24 - Oct 17 2026)\nTop themes: ${top}.\nQuotes:\n${quotes.map(x => `- \"${x.q}\" (${x.id})`).join('\\n')}\nKey observation: ${d.key_observation}\nActions:\n${d.action_ideas.map((a, i) => `${i + 1}. ${a}`).join('\\n')}`;\n\nconst fee =\n`Fee issue: ${d.identified_fee_issue}\nBrokerage explainer:\n${d.explanation_bullets.map(b => `- ${b}`).join('\\n')}\nSources: ${links.join(' | ')}\nLast checked: ${today}`;\n\nconst notion_content = `${pulse}\\n\\n${fee}`;\n\nreturn [{ json: {\n  date: today,\n  top_themes: d.top_3_themes.map(t => t.name),\n  weekly_pulse: pulse,\n  identified_fee_issue: d.identified_fee_issue,\n  explanation_bullets: d.explanation_bullets,\n  source_links: links,\n  notion_content,\n  email_subject: 'Weekly Product Pulse + Customer Clarification — GROW',\n  email_body: `${pulse}\\n\\n--- Support snippet ---\\n${fee}`\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        16
+      ],
+      "id": "00e8c57b-a864-46d2-b4dc-09937fc562c9",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $('Code in JavaScript').item.json.email_subject }}",
+        "message": "={{ $('Code in JavaScript').item.json.email_body }}",
+        "options": {
+          "sendTo": "eway2atharva@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2304,
+        16
+      ],
+      "id": "dab5f6ce-77a4-4c3e-b6d2-c2079843612a",
+      "name": "Create a draft",
+      "webhookId": "51f10998-199d-40dd-9e2d-13ef02b45f14",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "nBxNDn0WJ6bGBwBZ",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "MCP Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3d2eff18-c7d1-4d04-9e42-4b5696c31cb9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "da4606a5e970aa7b065e442380347346f5e35ce8b6ca9ba1fbde87c40e7a492d"
+  },
+  "nodeGroups": [],
+  "id": "q5ZKNPB2qOTqSzGZ",
+  "tags": []
+}
