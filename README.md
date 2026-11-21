@@ -26,8 +26,10 @@ The **n8n Form** node ("Review generated update") pauses the workflow after the 
 ## Files
 - weekly_pulse.md, fee_explainer.md, notion_entry.md, email_draft.md, sources.md, reviews_sample.csv, plus screenshots.
 
-## Demo
-Demo video (≤3 min): <PASTE YOUR VIDEO LINK HERE>
+## Live Prototype
+https://atharva00000.app.n8n.cloud/form/929dd734-1bff-45fa-bc0e-673f85aa8ba5
+
+Upload `reviews_sample.csv`, review the generated pulse on the approval page, and choose Approve to create the Notion page and the Gmail draft. Reject creates nothing.
 
 ## Screenshots
 ![Workflow](screenshots/1_workflow_canvas.png)
